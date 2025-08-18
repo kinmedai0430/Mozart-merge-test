@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>モーツァルト画像合成V2</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #000000;
+      color: #fff;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    .controls {
+      flex: 1;
+      max-width: 500px;
+    }
+    .preview-area {
+      flex: 1;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 500px;
+    }
+    .drop-zone {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 10px;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+    .drop-zone.qr {
+      display: inline-block;
+      width: calc(50% - 15px);
+      margin-right: 10px;
+      vertical-align: top;
+    }
+    .drop-zone.qr:last-of-type {
+      margin-right: 0;
+    }
+    .preview-thumb {
+      max-width: 100px;
+      max-height: 100px;
+      display: block;
+      margin: 10px auto;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    #canvas {
+      display: none;
+    }
+    #preview {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+    .qr-group {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .qr-input-group {
+      width: calc(50% - 10px);
+    }
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+    .button-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 5px;
+      text-align: left;
+    }
+    .button-group button {
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      background-color: #555;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .button-group span {
+      width: 50px;
+      text-align: center;
+    }
+    #downloadButton {
+      padding: 15px 30px;
+      font-size: 20px;
+      width: 250px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 20px;
+    }
+    #downloadButton:hover {
+      background-color: #0056b3;
+    }
+    /* ------------------------------------- */
+    /* スマートフォン用のスタイル（画面幅が768px以下の場合に適用） */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        padding: 10px;
+        gap: 10px;
+      }
+      .controls, .preview-area {
+        width: 100%;
+        max-width: none;
+      }
+      .qr-group {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .qr-input-group {
+        width: 100%;
+      }
+      .drop-zone.qr {
+        width: 100%;
+        margin-right: 0;
+      }
+      .controls-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      #downloadButton {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+      }
+      .button-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="controls">
+    <h2>背景画像</h2>
+
+    <div class="drop-zone" id="mainDrop">背景画像をここにドロップまたはクリック</div>
+    <input type="file" accept="image/*" id="mainInput">
+    <img id="mainThumb" class="preview-thumb" alt="背景画像プレビュー"><br>
+
+    <hr>
+    <h3>QRコード</h3>
+
+    <div class="qr-group">
+      <div class="qr-input-group">
+        <label for="leftTopText">テキスト:</label>
+        <input type="text" id="leftTopText" value="先１">
+        <div class="drop-zone" id="leftTopDrop">左上QR画像をここにドロップまたはクリック</div>
+        <input type="file" accept="image/*" id="leftTopInput">
+        <img id="leftTopThumb" class="preview-thumb" alt="左上QRプレビュー"><br>
+      </div>
+
+      <div class="qr-input-group">
+        <label for="rightTopText">テキスト:</label>
+        <input type="text" id="rightTopText" value="後１">
+        <div class="drop-zone" id="rightTopDrop">右上QR画像をここにドロップまたはクリック</div>
+        <input type="file" accept="image/*" id="rightTopInput">
+        <img id="rightTopThumb" class="preview-thumb" alt="右上QRプレビュー"><br>
+      </div>
+    </div>
+
+    <div class="qr-group">
+      <div class="qr-input-group">
+        <label for="leftQRText">テキスト:</label>
+        <input type="text" id="leftQRText" value="先２">
+        <div class="drop-zone" id="leftQRDrop">左下QR画像をここにドロップまたはクリック</div>
+        <input type="file" accept="image/*" id="leftQRInput">
+        <img id="leftThumb" class="preview-thumb" alt="左QRプレビュー"><br>
+      </div>
+
+      <div class="qr-input-group">
+        <label for="rightQRText">テキスト:</label>
+        <input type="text" id="rightQRText" value="後２">
+        <div class="drop-zone" id="rightQRDrop">右下QR画像をここにドロップまたはクリック</div>
+        <input type="file" accept="image/*" id="rightQRInput">
+        <img id="rightThumb" class="preview-thumb" alt="右QRプレビュー"><br>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-area">
+    <h3>合成画像プレビュー</h3>
+    <img id="preview" alt="合成画像プレビュー">
+    
+    <div class="controls-group">
+      <label>
+        <input type="checkbox" id="toggleText" checked> テキストを表示
+      </label>
+      <label for="textColorPicker">テキストの色</label>
+      <input type="color" id="textColorPicker" value="#ffffff">
+    </div>
+    
+    <div class="button-group">
+      <label>左QR位置調整:</label>
+      <button id="left-qr-offset-minus">-</button>
+      <span id="left-qr-offset-value">0</span>
+      <button id="left-qr-offset-plus">+</button>
+    </div>
+    <div class="button-group">
+      <label>右QR位置調整:</label>
+      <button id="right-qr-offset-minus">-</button>
+      <span id="right-qr-offset-value">0</span>
+      <button id="right-qr-offset-plus">+</button>
+    </div>
+    <div class="button-group">
+      <label>上QR位置調整:</label>
+      <button id="top-qr-vertical-offset-minus">-</button>
+      <span id="top-qr-vertical-offset-value">0</span>
+      <button id="top-qr-vertical-offset-plus">+</button>
+    </div>
+    <div class="button-group">
+      <label>下QR位置調整:</label>
+      <button id="bottom-qr-vertical-offset-minus">-</button>
+      <span id="bottom-qr-vertical-offset-value">0</span>
+      <button id="bottom-qr-vertical-offset-plus">+</button>
+    </div>
+    <div class="button-group">
+      <label>テキストサイズ調整:</label>
+      <button id="text-size-minus">-</button>
+      <span id="text-size-value">45</span>
+      <button id="text-size-plus">+</button>
+    </div>
+
+    <button id="downloadButton" style="display:none;">画像をダウンロード</button>
+  </div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+  const mainInput = document.getElementById('mainInput');
+  const leftTopInput = document.getElementById('leftTopInput');
+  const rightTopInput = document.getElementById('rightTopInput');
+  const leftQRInput = document.getElementById('leftQRInput');
+  const rightQRInput = document.getElementById('rightQRInput');
+
+  const mainDrop = document.getElementById('mainDrop');
+  const leftTopDrop = document.getElementById('leftTopDrop');
+  const rightTopDrop = document.getElementById('rightTopDrop');
+  const leftQRDrop = document.getElementById('leftQRDrop');
+  const rightQRDrop = document.getElementById('rightQRDrop');
+
+  const mainThumb = document.getElementById('mainThumb');
+  const leftTopThumb = document.getElementById('leftTopThumb');
+  const rightTopThumb = document.getElementById('rightTopThumb');
+  const leftThumb = document.getElementById('leftThumb');
+  const rightThumb = document.getElementById('rightThumb');
+
+  const downloadButton = document.getElementById('downloadButton');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const preview = document.getElementById('preview');
+
+  // ボタンと値表示要素の取得
+  const leftQR_offset_value = document.getElementById('left-qr-offset-value');
+  const leftQR_offset_minus = document.getElementById('left-qr-offset-minus');
+  const leftQR_offset_plus = document.getElementById('left-qr-offset-plus');
+  
+  const rightQR_offset_value = document.getElementById('right-qr-offset-value');
+  const rightQR_offset_minus = document.getElementById('right-qr-offset-minus');
+  const rightQR_offset_plus = document.getElementById('right-qr-offset-plus');
+
+  const topQR_vertical_offset_value = document.getElementById('top-qr-vertical-offset-value');
+  const topQR_vertical_offset_minus = document.getElementById('top-qr-vertical-offset-minus');
+  const topQR_vertical_offset_plus = document.getElementById('top-qr-vertical-offset-plus');
+
+  const bottomQR_vertical_offset_value = document.getElementById('bottom-qr-vertical-offset-value');
+  const bottomQR_vertical_offset_minus = document.getElementById('bottom-qr-vertical-offset-minus');
+  const bottomQR_vertical_offset_plus = document.getElementById('bottom-qr-vertical-offset-plus');
+
+  const textSize_value = document.getElementById('text-size-value');
+  const textSize_minus = document.getElementById('text-size-minus');
+  const textSize_plus = document.getElementById('text-size-plus');
+
+  const toggleTextCheckbox = document.getElementById('toggleText');
+  const textColorPicker = document.getElementById('textColorPicker');
+  const leftTopText = document.getElementById('leftTopText');
+  const rightTopText = document.getElementById('rightTopText');
+  const leftQRText = document.getElementById('leftQRText');
+  const rightQRText = document.getElementById('rightQRText');
+
+  let leftQR_x_offset = 0;
+  let rightQR_x_offset = 0;
+  let topQRVerticalOffset = 0;
+  let bottomQRVerticalOffset = 0;
+  let textSize = 45;
+
+  let mainImg = null, leftTopImg = null, rightTopImg = null, leftQRImg = null, rightQRImg = null;
+
+  function handleDrop(dropZone, input, thumb, imgSetter) {
+    dropZone.addEventListener('click', () => input.click());
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#00f';
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = '#ccc';
+    });
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#ccc';
+      if (e.dataTransfer.files.length) {
+        input.files = e.dataTransfer.files;
+        showThumbnail(input.files[0], thumb);
+        loadImage(input.files[0], img => {
+          imgSetter(img);
+          tryMerge();
+        });
+      }
+    });
+    input.addEventListener('change', () => {
+      if (input.files.length) {
+        showThumbnail(input.files[0], thumb);
+        loadImage(input.files[0], img => {
+          imgSetter(img);
+          tryMerge();
+        });
+      }
+    });
+  }
+
+  function showThumbnail(file, imgElem) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      imgElem.src = e.target.result;
+      imgElem.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function loadImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = () => callback(img);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  handleDrop(mainDrop, mainInput, mainThumb, img => mainImg = img);
+  handleDrop(leftTopDrop, leftTopInput, leftTopThumb, img => leftTopImg = img);
+  handleDrop(rightTopDrop, rightTopInput, rightTopThumb, img => rightTopImg = img);
+  handleDrop(leftQRDrop, leftQRInput, leftThumb, img => leftQRImg = img);
+  handleDrop(rightQRDrop, rightQRInput, rightThumb, img => rightQRImg = img);
+
+  // ボタンのイベントリスナー
+  leftQR_offset_minus.addEventListener('click', () => {
+    leftQR_x_offset -= 10;
+    leftQR_offset_value.textContent = leftQR_x_offset;
+    tryMerge();
+  });
+  leftQR_offset_plus.addEventListener('click', () => {
+    leftQR_x_offset += 10;
+    leftQR_offset_value.textContent = leftQR_x_offset;
+    tryMerge();
+  });
+
+  rightQR_offset_minus.addEventListener('click', () => {
+    rightQR_x_offset -= 10;
+    rightQR_offset_value.textContent = rightQR_x_offset;
+    tryMerge();
+  });
+  rightQR_offset_plus.addEventListener('click', () => {
+    rightQR_x_offset += 10;
+    rightQR_offset_value.textContent = rightQR_x_offset;
+    tryMerge();
+  });
+
+  topQR_vertical_offset_minus.addEventListener('click', () => {
+    topQRVerticalOffset -= 10;
+    topQR_vertical_offset_value.textContent = topQRVerticalOffset;
+    tryMerge();
+  });
+  topQR_vertical_offset_plus.addEventListener('click', () => {
+    topQRVerticalOffset += 10;
+    topQR_vertical_offset_value.textContent = topQRVerticalOffset;
+    tryMerge();
+  });
+
+  bottomQR_vertical_offset_minus.addEventListener('click', () => {
+    bottomQRVerticalOffset -= 10;
+    bottomQR_vertical_offset_value.textContent = bottomQRVerticalOffset;
+    tryMerge();
+  });
+  bottomQR_vertical_offset_plus.addEventListener('click', () => {
+    bottomQRVerticalOffset += 10;
+    bottomQR_vertical_offset_value.textContent = bottomQRVerticalOffset;
+    tryMerge();
+  });
+
+  textSize_minus.addEventListener('click', () => {
+    textSize = Math.max(10, textSize - 5); // 最小値を設定
+    textSize_value.textContent = textSize;
+    tryMerge();
+  });
+  textSize_plus.addEventListener('click', () => {
+    textSize = Math.min(150, textSize + 5); // 最大値を設定
+    textSize_value.textContent = textSize;
+    tryMerge();
+  });
+
+  toggleTextCheckbox.addEventListener('change', tryMerge);
+  textColorPicker.addEventListener('input', tryMerge);
+  leftTopText.addEventListener('input', tryMerge);
+  rightTopText.addEventListener('input', tryMerge);
+  leftQRText.addEventListener('input', tryMerge);
+  rightQRText.addEventListener('input', tryMerge);
+
+  function tryMerge() {
+    if (!mainImg) {
+      preview.style.display = 'none';
+      downloadButton.style.display = 'none';
+      return;
+    }
+
+    const targetWidth = mainImg.width;
+    const targetHeight = mainImg.height;
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    ctx.drawImage(mainImg, 0, 0, targetWidth, targetHeight);
+
+    const qrWidth = targetWidth * 0.15;
+    const qrHeight = qrWidth;
+    const qrMargin = targetWidth * 0.02;
+    const qrMarginTop = targetHeight * 0.2 + topQRVerticalOffset;
+    const qrMarginBottom = targetHeight * 0.2 + bottomQRVerticalOffset;
+    const verticalGap = targetHeight * 0.15;
+    const textGap = 50;
+
+    const showText = toggleTextCheckbox.checked;
+    ctx.fillStyle = textColorPicker.value;
+    ctx.font = `bold ${textSize}px Arial`;
+    ctx.textAlign = 'center';
+
+    if (leftTopImg) {
+      const leftTopQR_x = qrMargin + 540 + leftQR_x_offset;
+      ctx.drawImage(leftTopImg, leftTopQR_x, qrMarginTop, qrWidth, qrHeight);
+      if (showText) {
+        ctx.fillText(leftTopText.value, leftTopQR_x + qrWidth / 2, qrMarginTop - 40);
+      }
+    }
+    
+    if (leftQRImg) {
+      const leftQR_x = qrMargin + 540 + leftQR_x_offset;
+      ctx.drawImage(leftQRImg, leftQR_x, qrMarginBottom + verticalGap + (targetHeight * 0.3), qrWidth, qrHeight);
+      if (showText) {
+        ctx.fillText(leftQRText.value, leftQR_x + qrWidth / 2, qrMarginBottom + verticalGap + (targetHeight * 0.3) - textGap);
+      }
+    }
+
+    if (rightTopImg) {
+      const rightTopQR_x = targetWidth - qrWidth - qrMargin + rightQR_x_offset;
+      ctx.drawImage(rightTopImg, rightTopQR_x, qrMarginTop, qrWidth, qrHeight);
+      if (showText) {
+        ctx.fillText(rightTopText.value, rightTopQR_x + qrWidth / 2, qrMarginTop - 40);
+      }
+    }
+
+    if (rightQRImg) {
+      const rightQR_x = targetWidth - qrWidth - qrMargin + rightQR_x_offset;
+      ctx.drawImage(rightQRImg, rightQR_x, qrMarginBottom + verticalGap + (targetHeight * 0.3), qrWidth, qrHeight);
+      if (showText) {
+        ctx.fillText(rightQRText.value, rightQR_x + qrWidth / 2, qrMarginBottom + verticalGap + (targetHeight * 0.3) - textGap);
+      }
+    }
+
+    preview.src = canvas.toDataURL('image/png');
+    preview.style.display = 'block';
+    downloadButton.style.display = 'inline-block';
+  }
+
+  // ここから修正箇所
+  downloadButton.addEventListener('click', () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (isIOS) {
+        const imageUrl = canvas.toDataURL('image/png');
+        preview.src = imageUrl;
+        alert('画像を長押しして保存してください。');
+        const newTab = window.open();
+        newTab.document.body.innerHTML = `<img src="${imageUrl}" style="max-width: 100%; height: auto; display: block; margin: auto;">`;
+        newTab.document.title = '画像を保存';
+    } else {
+        const link = document.createElement('a');
+        link.download = 'merged-image.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+  });
+  // ここまで修正箇所
+</script>
+
+</body>
+</html>
