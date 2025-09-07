@@ -2,65 +2,103 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>負荷テスト1.1</title>
+  <title>固定ルート画像合成v2.2</title>
   <style>
     :root {
-      --color-bg: #000000;
-      --color-text: #ffffff;
-      --color-dropzone-bg: #333;
-      --color-dropzone-border: #ccc;
+      --color-bg: #263238; /* 深い青みがかったグレー */
+      --color-text: #eceff1; /* 薄いグレー */
+      --color-dropzone-bg: #37474f; /* 背景より少し明るい色 */
+      --color-dropzone-border: #b0bec5; /* 明るいグレー */
       --color-blue: #007bff;
       --color-blue-hover: #0056b3;
     }
     body {
-      font-family: sans-serif;
-      padding: 20px;
+      font-family: 'Inter', sans-serif;
+      padding: 40px;
       background: var(--color-bg);
       color: var(--color-text);
       display: flex;
-      gap: 20px;
       justify-content: center;
       min-height: 100vh;
       box-sizing: border-box;
       overflow-y: auto;
     }
-    .controls {
-      flex: 1;
-      max-width: 500px;
+    .main-content-wrapper {
+        display: flex;
+        gap: 40px;
+        background: var(--color-dropzone-bg);
+        padding: 40px;
+        border-radius: 8px;
+        max-width: 1200px;
+        width: 100%;
+    }
+    .settings-column {
+        flex: 1; /* 共通設定列 */
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .preview-column {
+        flex: 2; /* プレビュー列をより広く */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+    .qr-controls-column {
+        flex: 1.5; /* QRコードと背景画像列 */
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .section {
+        background: transparent;
+        padding: 0;
+        border-radius: 8px;
+        width: 100%;
     }
     .preview-area {
-      flex: 1;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      max-width: 500px;
+      gap: 20px;
+      width: 100%;
     }
     .drop-zone {
       border: 2px dashed var(--color-dropzone-border);
       padding: 20px;
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
       background: var(--color-dropzone-bg);
       color: var(--color-text);
       cursor: pointer;
-      transition: border-color 0.2s ease;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 150px;
+      border-radius: 8px;
     }
     .drop-zone.qr {
-      display: inline-block;
-      width: calc(50% - 15px);
-      margin-right: 10px;
-      vertical-align: top;
+      min-height: 120px;
     }
     .drop-zone.dragover {
       border-color: var(--color-blue);
+      background-color: rgba(0, 123, 255, 0.1);
     }
     .preview-thumb {
-      max-width: 100px;
+      max-width: 100%;
       max-height: 100px;
       display: block;
-      margin: 10px auto;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    .drop-zone p {
+      margin: 0;
+      font-size: 14px;
+      opacity: 0.8;
     }
     input[type="file"] {
       display: none;
@@ -73,35 +111,37 @@
       height: auto;
       border: 1px solid var(--color-dropzone-border);
       margin-bottom: 20px;
+      border-radius: 8px;
     }
     .qr-group {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
+      gap: 20px;
     }
     .qr-input-group {
-      width: calc(50% - 10px);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     .slider-group {
       width: 100%;
-      max-width: 600px;
-      margin-top: 5px;
+      margin-top: 10px;
       text-align: left;
     }
     input[type="range"] {
       width: 100%;
       height: 25px;
     }
-    .download-group {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      margin-top: 20px;
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
     }
-    #downloadButton {
+    #downloadButton, #clearButton {
       padding: 15px 30px;
       font-size: 20px;
-      width: 250px;
       background-color: var(--color-blue);
       color: white;
       border: none;
@@ -109,293 +149,415 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
-    #downloadButton:hover {
+    #downloadButton:hover, #clearButton:hover {
       background-color: var(--color-blue-hover);
     }
-    .ios-download-text {
-      font-size: 14px;
-      color: #aaa;
-      max-width: 200px;
+    #clearButton {
+        background-color: #dc3545;
+    }
+    #clearButton:hover {
+        background-color: #c82333;
     }
     .controls-group {
       display: flex;
       align-items: center;
       gap: 20px;
       justify-content: center;
+      margin-bottom: 20px;
     }
     .hidden {
       display: none !important;
     }
+    h2, h3 {
+      font-weight: 500;
+      margin-top: 0;
+    }
+    input[type="text"] {
+      padding: 8px;
+      background: #263238;
+      border: 1px solid #b0bec5;
+      color: #eceff1;
+      border-radius: 4px;
+    }
+    input[type="checkbox"] {
+      accent-color: var(--color-blue);
+    }
+    .tip-text {
+        font-size: 14px;
+        color: #b0bec5;
+        margin-top: 10px;
+    }
+    .guide-text {
+      font-size: 16px;
+      margin-top: 20px;
+      line-height: 1.6;
+    }
   </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <div class="controls">
-    <h2>背景画像</h2>
-
-    <div class="drop-zone" id="mainDrop">背景画像をここにドロップまたはクリック</div>
-    <input type="file" accept="image/*" id="mainInput">
-    <img id="mainThumb" class="preview-thumb hidden" alt="背景画像プレビュー"><br>
-
-    <hr>
-    <h3>QRコード</h3>
-
-    <div class="qr-group">
-      <div class="qr-input-group">
-        <label for="leftTopText">テキスト</label>
-        <input type="text" id="leftTopText" value="先１">
-        <div class="drop-zone" id="leftTopDrop">左上QR画像をここにドロップまたはクリック</div>
-        <input type="file" accept="image/*" id="leftTopInput">
-        <img id="leftTopThumb" class="preview-thumb hidden" alt="左上QRプレビュー"><br>
+  <div class="main-content-wrapper">
+    <div class="settings-column">
+      <div class="section">
+        <h3>共通設定</h3>
+        <div class="controls-group">
+            <label>
+              <input type="checkbox" id="toggleText" checked> テキストを表示
+            </label>
+            <label for="textColorPicker">テキストの色</label>
+            <input type="color" id="textColorPicker" value="#ffffff">
+        </div>
+        <div class="slider-group">
+            <label for="bulkTextSize">一括テキストサイズ調整</label>
+            <input type="range" id="bulkTextSize" min="10" max="200" value="80">
+        </div>
+        <div class="slider-group">
+          <label for="left-qr-offset">左側位置調整</label>
+          <input type="range" id="left-qr-offset" min="-700" max="800" value="0">
+        </div>
+        <div class="slider-group">
+          <label for="right-qr-offset">右側位置調整</label>
+          <input type="range" id="right-qr-offset" min="-1200" max="200" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="top-qr-vertical-offset">上側位置調整</label>
+            <input type="range" id="top-qr-vertical-offset" min="-500" max="500" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="bottom-qr-vertical-offset">下側位置調整</label>
+            <input type="range" id="bottom-qr-vertical-offset" min="-500" max="500" value="0">
+        </div>
       </div>
-
-      <div class="qr-input-group">
-        <label for="rightTopText">テキスト</label>
-        <input type="text" id="rightTopText" value="後１">
-        <div class="drop-zone" id="rightTopDrop">右上QR画像をここにドロップまたはクリック</div>
-        <input type="file" accept="image/*" id="rightTopInput">
-        <img id="rightTopThumb" class="preview-thumb hidden" alt="右上QRプレビュー"><br>
+      <div class="section">
+        <h3>個別テキスト表示</h3>
+        <label>
+          <input type="checkbox" id="individualTextToggle"> 個別テキストを表示
+        </label>
+        <div class="individual-text-controls hidden">
+          <label for="individualText">テキスト</label>
+          <input type="text" id="individualText" value="サンプルテキスト">
+          <div class="slider-group">
+              <label for="individualTextSize">サイズ調整</label>
+              <input type="range" id="individualTextSize" min="10" max="200" value="80">
+          </div>
+          <div class="slider-group">
+              <label for="individualTextX">左右調整</label>
+              <input type="range" id="individualTextX" min="-500" max="500" value="0">
+          </div>
+          <div class="slider-group">
+              <label for="individualTextY">上下調整</label>
+              <input type="range" id="individualTextY" min="-500" max="500" value="0">
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="qr-group">
-      <div class="qr-input-group">
-        <label for="leftQRText">テキスト</label>
-        <input type="text" id="leftQRText" value="先２">
-        <div class="drop-zone" id="leftQRDrop">左下QR画像をここにドロップまたはクリック</div>
-        <input type="file" accept="image/*" id="leftQRInput">
-        <img id="leftThumb" class="preview-thumb hidden" alt="左QRプレビュー"><br>
+    <div class="preview-column">
+      <div class="section preview-area">
+        <h3>合成画像プレビュー</h3>
+        <img id="preview" alt="合成画像プレビュー" class="hidden">
+        <div class="button-group">
+            <button id="downloadButton" class="hidden">画像をダウンロード</button>
+            <button id="clearButton" class="hidden">画像を全て削除</button>
+        </div>
+        <p class="tip-text hidden" id="ios-download-tip">iPhone・iPadなどの方はプレビュー画像を<br>長押しして画像をダウンロードしてください</p>
       </div>
-
-      <div class="qr-input-group">
-        <label for="rightQRText">テキスト</label>
-        <input type="text" id="rightQRText" value="後２">
-        <div class="drop-zone" id="rightQRDrop">右下QR画像をここにドロップまたはクリック</div>
-        <input type="file" accept="image/*" id="rightQRInput">
-        <img id="rightThumb" class="preview-thumb hidden" alt="右QRプレビュー"><br>
+      <div class="section">
+          <h2>背景画像</h2>
+          <div class="drop-zone" id="mainDrop">
+              <p>背景画像をここにドロップまたはクリック</p>
+              <img id="mainThumb" class="preview-thumb hidden" alt="背景画像プレビュー">
+          </div>
+          <input type="file" accept="image/*" id="mainInput">
       </div>
+    </div>
+    <div class="qr-controls-column">
+      <div class="section">
+        <h3>QRコード</h3>
+        <div class="qr-group">
+          <div class="qr-input-group">
+            <label for="leftTopText">テキスト</label>
+            <input type="text" id="leftTopText" value="先１">
+            <div class="drop-zone qr" id="leftTopDrop">
+                <p>左上QR画像をここにドロップまたはクリック</p>
+                <img id="leftTopThumb" class="preview-thumb hidden" alt="左上QRプレビュー">
+            </div>
+            <input type="file" accept="image/*" id="leftTopInput">
+          </div>
+          <div class="qr-input-group">
+            <label for="rightTopText">テキスト</label>
+            <input type="text" id="rightTopText" value="後１">
+            <div class="drop-zone qr" id="rightTopDrop">
+                <p>右上QR画像をここにドロップまたはクリック</p>
+                <img id="rightTopThumb" class="preview-thumb hidden" alt="右上QRプレビュー">
+            </div>
+            <input type="file" accept="image/*" id="rightTopInput">
+          </div>
+        </div>
+        <div class="qr-group">
+          <div class="qr-input-group">
+            <label for="leftQRText">テキスト</label>
+            <input type="text" id="leftQRText" value="先２">
+            <div class="drop-zone qr" id="leftQRDrop">
+                <p>左下QR画像をここにドロップまたはクリック</p>
+                <img id="leftThumb" class="preview-thumb hidden" alt="左QRプレビュー">
+            </div>
+            <input type="file" accept="image/*" id="leftQRInput">
+          </div>
+          <div class="qr-input-group">
+            <label for="rightQRText">テキスト</label>
+            <input type="text" id="rightQRText" value="後２">
+            <div class="drop-zone qr" id="rightQRDrop">
+                <p>右下QR画像をここにドロップまたはクリック</p>
+                <img id="rightThumb" class="preview-thumb hidden" alt="右QRプレビュー">
+            </div>
+            <input type="file" accept="image/*" id="rightQRInput">
+          </div>
+        </div>
+      </div>
+      <p class="guide-text">
+        ①背景画像をアップロードしてください<br>
+        ②QRコード画像をアップロードしてください<br>
+        ③テキストや位置などを調整してください
+      </p>
     </div>
   </div>
-
-  <div class="preview-area">
-    <h3>合成画像プレビュー</h3>
-    <img id="preview" alt="合成画像プレビュー" class="hidden">
-    
-    <div class="controls-group">
-      <label>
-        <input type="checkbox" id="toggleText" checked> テキストを表示
-      </label>
-      <label for="textColorPicker">テキストの色</label>
-      <input type="color" id="textColorPicker" value="#ffffff">
-    </div>
-    
-    <div class="slider-group">
-      <label for="left-qr-offset">左QR位置調整</label>
-      <input type="range" id="left-qr-offset" min="-700" max="800" value="0">
-    </div>
-    <div class="slider-group">
-      <label for="right-qr-offset">右QR位置調整</label>
-      <input type="range" id="right-qr-offset" min="-1200" max="200" value="0">
-    </div>
-    <div class="slider-group">
-        <label for="top-qr-vertical-offset">上QR位置調整</label>
-        <input type="range" id="top-qr-vertical-offset" min="-500" max="500" value="0">
-    </div>
-    <div class="slider-group">
-        <label for="bottom-qr-vertical-offset">下QR位置調整</label>
-        <input type="range" id="bottom-qr-vertical-offset" min="-500" max="500" value="0">
-    </div>
-    <div class="slider-group">
-        <label for="text-size">テキストサイズ調整</label>
-        <input type="range" id="text-size" min="10" max="150" value="45">
-    </div>
-
-    <div class="download-group">
-        <button id="downloadButton" class="hidden">画像をダウンロード</button>
-        <span class="ios-download-text hidden">iPhone・iPadなどの方はプレビュー画像を長押ししてダウンロードしてください</span>
-    </div>
-  </div>
-
-<canvas id="canvas"></canvas>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const elements = {
-    main: { input: 'mainInput', drop: 'mainDrop', thumb: 'mainThumb', img: null },
-    leftTop: { input: 'leftTopInput', drop: 'leftTopDrop', thumb: 'leftTopThumb', text: 'leftTopText', img: null },
-    rightTop: { input: 'rightTopInput', drop: 'rightTopDrop', thumb: 'rightTopThumb', text: 'rightTopText', img: null },
-    leftQR: { input: 'leftQRInput', drop: 'leftQRDrop', thumb: 'leftThumb', text: 'leftQRText', img: null },
-    rightQR: { input: 'rightQRInput', drop: 'rightQRDrop', thumb: 'rightThumb', text: 'rightQRText', img: null }
-  };
-
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const preview = document.getElementById('preview');
-  const downloadButton = document.getElementById('downloadButton');
-  const iosDownloadText = document.querySelector('.ios-download-text');
-  
-  const sliders = {
-    leftOffset: 'left-qr-offset',
-    rightOffset: 'right-qr-offset',
-    topVertical: 'top-qr-vertical-offset',
-    bottomVertical: 'bottom-qr-vertical-offset',
-    textSize: 'text-size'
-  };
-
-  const options = {
-    toggleText: 'toggleText',
-    textColor: 'textColorPicker'
-  };
-
-  const imgData = {};
-  let isMerging = false;
-
-  const loadImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
+  <canvas id="canvas"></canvas>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const elements = {
+      main: { input: 'mainInput', drop: 'mainDrop', thumb: 'mainThumb', img: null },
+      leftTop: { input: 'leftTopInput', drop: 'leftTopDrop', thumb: 'leftTopThumb', text: 'leftTopText', img: null },
+      rightTop: { input: 'rightTopInput', drop: 'rightTopDrop', thumb: 'rightTopThumb', text: 'rightTopText', img: null },
+      leftQR: { input: 'leftQRInput', drop: 'leftQRDrop', thumb: 'leftThumb', text: 'leftQRText', img: null },
+      rightQR: { input: 'rightQRInput', drop: 'rightQRDrop', thumb: 'rightThumb', text: 'rightQRText', img: null }
+    };
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const preview = document.getElementById('preview');
+    const downloadButton = document.getElementById('downloadButton');
+    const clearButton = document.getElementById('clearButton');
+    const iosTip = document.getElementById('ios-download-tip');
+    const sliders = {
+      bulkTextSize: { id: 'bulkTextSize', initial: 80 },
+      leftOffset: { id: 'left-qr-offset', initial: 0 },
+      rightOffset: { id: 'right-qr-offset', initial: 0 },
+      topVertical: { id: 'top-qr-vertical-offset', initial: 0 },
+      bottomVertical: { id: 'bottom-qr-vertical-offset', initial: 0 }
+    };
+    const options = {
+      toggleText: 'toggleText',
+      textColor: 'textColorPicker'
+    };
+    const individualTextControls = {
+      toggle: 'individualTextToggle',
+      text: 'individualText',
+      size: 'individualTextSize',
+      x: 'individualTextX',
+      y: 'individualTextY'
+    };
+    const imgData = {};
+    let isMerging = false;
+    const loadImage = (file) => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        const reader = new FileReader();
+        reader.onload = e => img.src = e.target.result;
+        reader.readAsDataURL(file);
+      });
+    };
+    const showThumbnail = (file, dropZoneElem, imgElem) => {
       const reader = new FileReader();
-      reader.onload = e => img.src = e.target.result;
+      reader.onload = e => {
+        imgElem.src = e.target.result;
+        imgElem.classList.remove('hidden');
+        dropZoneElem.querySelector('p').classList.add('hidden');
+      };
       reader.readAsDataURL(file);
-    });
-  };
-  
-  const showThumbnail = (file, imgElem) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      imgElem.src = e.target.result;
-      imgElem.classList.remove('hidden');
     };
-    reader.readAsDataURL(file);
-  };
-  
-  const tryMerge = () => {
-    isMerging = false;
-    const mainImg = imgData.main;
-    if (!mainImg) {
-      preview.classList.add('hidden');
-      downloadButton.classList.add('hidden');
-      iosDownloadText.classList.add('hidden');
-      return;
-    }
-
-    canvas.width = mainImg.width;
-    canvas.height = mainImg.height;
-    ctx.drawImage(mainImg, 0, 0);
-
-    const qrWidth = mainImg.width * 0.15;
-    const qrHeight = qrWidth;
-    const qrMargin = mainImg.width * 0.02;
-    
-    const qrOffsets = {
-      left: parseInt(document.getElementById(sliders.leftOffset).value),
-      right: parseInt(document.getElementById(sliders.rightOffset).value),
-      top: parseInt(document.getElementById(sliders.topVertical).value),
-      bottom: parseInt(document.getElementById(sliders.bottomVertical).value)
+    const resetElements = () => {
+        for (const name in elements) {
+            const elem = elements[name];
+            const dropZone = document.getElementById(elem.drop);
+            const thumbImg = document.getElementById(elem.thumb);
+            const fileInput = document.getElementById(elem.input);
+            
+            imgData[name] = null;
+            
+            thumbImg.classList.add('hidden');
+            thumbImg.src = '';
+            dropZone.querySelector('p').classList.remove('hidden');
+            fileInput.value = ''; // ファイル入力の値をリセット
+        }
+        document.getElementById(options.toggleText).checked = true;
+        document.getElementById(options.textColor).value = '#ffffff';
+        for (const key in sliders) {
+            document.getElementById(sliders[key].id).value = sliders[key].initial;
+        }
+        document.getElementById(individualTextControls.toggle).checked = false;
+        document.querySelector('.individual-text-controls').classList.add('hidden');
+        document.getElementById(individualTextControls.text).value = '先、後など';
+        document.getElementById(individualTextControls.size).value = 80;
+        document.getElementById(individualTextControls.x).value = 0;
+        document.getElementById(individualTextControls.y).value = 0;
+        document.getElementById('leftTopText').value = '先１';
+        document.getElementById('rightTopText').value = '後１';
+        document.getElementById('leftQRText').value = '先２';
+        document.getElementById('rightQRText').value = '後２';
+        preview.classList.add('hidden');
+        preview.src = '';
+        downloadButton.classList.add('hidden');
+        clearButton.classList.add('hidden');
+        iosTip.classList.add('hidden');
+        scheduleMerge();
     };
-
-    const topY = mainImg.height * 0.2 + qrOffsets.top;
-    const bottomY = mainImg.height * 0.2 + qrOffsets.bottom + mainImg.height * 0.15;
-    const textSize = parseInt(document.getElementById(sliders.textSize).value);
-    const showText = document.getElementById(options.toggleText).checked;
-
-    ctx.fillStyle = document.getElementById(options.textColor).value;
-    ctx.font = `bold ${textSize}px Arial`;
-    ctx.textAlign = 'center';
-
-    const qrPositions = {
-      leftTop: { img: imgData.leftTop, x: qrMargin + 540 + qrOffsets.left, y: topY, text: elements.leftTop.text },
-      rightTop: { img: imgData.rightTop, x: mainImg.width - qrWidth - qrMargin + qrOffsets.right, y: topY, text: elements.rightTop.text },
-      leftQR: { img: imgData.leftQR, x: qrMargin + 540 + qrOffsets.left, y: bottomY, text: elements.leftQR.text },
-      rightQR: { img: imgData.rightQR, x: mainImg.width - qrWidth - qrMargin + qrOffsets.right, y: bottomY, text: elements.rightQR.text }
-    };
-    
-    for (const key in qrPositions) {
-      const pos = qrPositions[key];
-      if (pos.img) {
-        ctx.drawImage(pos.img, pos.x, pos.y, qrWidth, qrHeight);
-        if (showText) {
-          const text = document.getElementById(pos.text).value;
-          ctx.fillText(text, pos.x + qrWidth / 2, pos.y - 40);
+    const tryMerge = () => {
+      isMerging = false;
+      const mainImg = imgData.main;
+      if (!mainImg) {
+        preview.classList.add('hidden');
+        downloadButton.classList.add('hidden');
+        clearButton.classList.add('hidden');
+        iosTip.classList.add('hidden');
+        return;
+      }
+      canvas.width = mainImg.width;
+      canvas.height = mainImg.height;
+      ctx.drawImage(mainImg, 0, 0);
+      const qrWidth = mainImg.width * 0.15;
+      const qrHeight = qrWidth;
+      const qrMargin = mainImg.width * 0.02;
+      const qrOffsets = {
+        left: parseInt(document.getElementById(sliders.leftOffset.id).value),
+        right: parseInt(document.getElementById(sliders.rightOffset.id).value),
+        top: parseInt(document.getElementById(sliders.topVertical.id).value),
+        bottom: parseInt(document.getElementById(sliders.bottomVertical.id).value)
+      };
+      const topY = mainImg.height * 0.2 + qrOffsets.top;
+      const bottomY = mainImg.height * 0.2 + qrOffsets.bottom + mainImg.height * 0.15;
+      const qrPositions = {
+        leftTop: { img: imgData.leftTop, x: qrMargin + 540 + qrOffsets.left, y: topY, text: elements.leftTop.text },
+        rightTop: { img: imgData.rightTop, x: mainImg.width - qrWidth - qrMargin + qrOffsets.right, y: topY, text: elements.rightTop.text },
+        leftQR: { img: imgData.leftQR, x: qrMargin + 540 + qrOffsets.left, y: bottomY, text: elements.leftQR.text },
+        rightQR: { img: imgData.rightQR, x: mainImg.width - qrWidth - qrMargin + qrOffsets.right, y: bottomY, text: elements.rightQR.text }
+      };
+      // QRコード画像と連動テキストの描画
+      for (const key in qrPositions) {
+        const pos = qrPositions[key];
+        if (pos.img) {
+          ctx.drawImage(pos.img, pos.x, pos.y, qrWidth, qrHeight);
         }
       }
+      const showGlobalText = document.getElementById(options.toggleText).checked;
+      const showIndividualText = document.getElementById(individualTextControls.toggle).checked;
+      ctx.fillStyle = document.getElementById(options.textColor).value;
+      ctx.textAlign = 'center';
+      if (showGlobalText) {
+          const bulkTextSize = parseInt(document.getElementById(sliders.bulkTextSize.id).value);
+          ctx.font = `bold ${bulkTextSize}px Arial`;
+          for (const key in qrPositions) {
+              const pos = qrPositions[key];
+              if (pos.img) {
+                  const text = document.getElementById(pos.text).value;
+                  ctx.fillText(text, pos.x + qrWidth / 2, pos.y - 40);
+              }
+          }
+      }
+      // 個別テキストの描画 (ループから独立)
+      if (showIndividualText) {
+          const text = document.getElementById(individualTextControls.text).value;
+          const individualTextSize = parseInt(document.getElementById(individualTextControls.size).value);
+          const textX = parseInt(document.getElementById(individualTextControls.x).value);
+          const textY = parseInt(document.getElementById(individualTextControls.y).value);
+          
+          ctx.font = `bold ${individualTextSize}px Arial`;
+          
+          const baseX = canvas.width / 2;
+          const baseY = canvas.height / 2;
+          
+          ctx.fillText(text, baseX + textX, baseY + textY);
+      }
+      preview.src = canvas.toDataURL('image/png');
+      preview.classList.remove('hidden');
+      downloadButton.classList.remove('hidden');
+      clearButton.classList.remove('hidden');
+      iosTip.classList.remove('hidden');
+    };
+    const scheduleMerge = () => {
+      if (isMerging) return;
+      isMerging = true;
+      window.requestAnimationFrame(tryMerge);
+    };
+    downloadButton.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'merged-image.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+    clearButton.addEventListener('click', resetElements);
+    for (const name in elements) {
+      const elem = elements[name];
+      const dropZone = document.getElementById(elem.drop);
+      const fileInput = document.getElementById(elem.input);
+      const thumbImg = document.getElementById(elem.thumb);
+      const textInput = elem.text ? document.getElementById(elem.text) : null;
+      dropZone.addEventListener('click', () => fileInput.click());
+      dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+      dropZone.addEventListener('dragenter', e => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+      });
+      dropZone.addEventListener('drop', async e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          showThumbnail(file, dropZone, thumbImg);
+          imgData[name] = await loadImage(file);
+          scheduleMerge();
+        }
+      });
+      fileInput.addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (file) {
+          showThumbnail(file, dropZone, thumbImg);
+          imgData[name] = await loadImage(file);
+          scheduleMerge();
+        }
+      });
+      if (textInput) {
+        textInput.addEventListener('input', scheduleMerge);
+      }
     }
-
-    preview.src = canvas.toDataURL('image/png');
-    preview.classList.remove('hidden');
-    downloadButton.classList.remove('hidden');
-    iosDownloadText.classList.remove('hidden');
-  };
-
-  const scheduleMerge = () => {
-    if (isMerging) return;
-    isMerging = true;
-    window.requestAnimationFrame(tryMerge);
-  };
-
-  downloadButton.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'merged-image.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    document.getElementById(options.toggleText).addEventListener('change', scheduleMerge);
+    document.getElementById(options.textColor).addEventListener('input', scheduleMerge);
+    for (const key in sliders) {
+      document.getElementById(sliders[key].id).addEventListener('input', scheduleMerge);
+    }
+    const individualTextToggle = document.getElementById(individualTextControls.toggle);
+    const individualTextDiv = document.querySelector('.individual-text-controls');
+    individualTextToggle.addEventListener('change', () => {
+        if (individualTextToggle.checked) {
+            individualTextDiv.classList.remove('hidden');
+        } else {
+            individualTextDiv.classList.add('hidden');
+        }
+        scheduleMerge();
+    });
+    document.getElementById(individualTextControls.text).addEventListener('input', scheduleMerge);
+    document.getElementById(individualTextControls.size).addEventListener('input', scheduleMerge);
+    document.getElementById(individualTextControls.x).addEventListener('input', scheduleMerge);
+    document.getElementById(individualTextControls.y).addEventListener('input', scheduleMerge);
   });
-
-  for (const name in elements) {
-    const elem = elements[name];
-    const dropZone = document.getElementById(elem.drop);
-    const fileInput = document.getElementById(elem.input);
-    const thumbImg = document.getElementById(elem.thumb);
-    const textInput = elem.text ? document.getElementById(elem.text) : null;
-    
-    dropZone.addEventListener('click', () => fileInput.click());
-    
-    dropZone.addEventListener('dragover', e => {
-      e.preventDefault();
-      dropZone.classList.add('dragover');
-    });
-    
-    dropZone.addEventListener('dragenter', e => {
-      e.preventDefault();
-      dropZone.classList.add('dragover');
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.classList.remove('dragover');
-    });
-
-    dropZone.addEventListener('drop', async e => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) {
-        showThumbnail(file, thumbImg);
-        imgData[name] = await loadImage(file);
-        scheduleMerge();
-      }
-    });
-
-    fileInput.addEventListener('change', async e => {
-      const file = e.target.files[0];
-      if (file) {
-        showThumbnail(file, thumbImg);
-        imgData[name] = await loadImage(file);
-        scheduleMerge();
-      }
-    });
-
-    if (textInput) {
-      textInput.addEventListener('input', scheduleMerge);
-    }
-  }
-
-  for (const key in sliders) {
-    document.getElementById(sliders[key]).addEventListener('input', scheduleMerge);
-  }
-  document.getElementById(options.toggleText).addEventListener('change', scheduleMerge);
-  document.getElementById(options.textColor).addEventListener('input', scheduleMerge);
-});
-</script>
-
+  </script>
 </body>
 </html>
