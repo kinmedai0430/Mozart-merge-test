@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>固定ルート画像合成v3.2 (Worker対応)</title>
+  <title>固定ルート画像合成v3.4 (Worker対応)</title>
   <style>
     :root {
       --color-bg: #263238;
@@ -438,7 +438,6 @@
       
       ctx.drawImage(mainImg, 0, 0);
 
-      // QRサイズをスライダーの値から計算
       const qrSizePercent = params.qrSize / 100;
       const qrWidth = mainImg.width * qrSizePercent;
       const qrHeight = qrWidth;
@@ -505,9 +504,9 @@
         indTextSize2: 80, indTextX2: 0, indTextY2: 0
     };
     const mobileParams = {
-        bulkTextSize: 70, leftOffset: 300, rightOffset: -10, topVertical: 15, bottomVertical: 150, qrSize: 14,
-        indTextSize1: 80, indTextX1: 0, indTextY1: 0,
-        indTextSize2: 80, indTextX2: 0, indTextY2: 0
+        bulkTextSize: 50, leftOffset: 100, rightOffset: 20, topVertical: 0, bottomVertical: 250, qrSize: 18,
+        indTextSize1: 60, indTextX1: -100, indTextY1: 0,
+        indTextSize2: 60, indTextX2: 100, indTextY2: 0
     };
     const isMobile = window.matchMedia('(max-width: 767px)').matches;
     const activeParams = isMobile ? mobileParams : desktopParams;
@@ -599,7 +598,7 @@
       document.getElementById(options.toggleText).checked = true;
       document.getElementById(options.textColor).value = '#ffffff';
       
-      initializeSliders(); // デバイス別の初期値でリセット
+      initializeSliders(); 
       
       document.getElementById(individualTextControls.toggle).checked = false;
       document.querySelector('.individual-text-controls').classList.add('hidden');
@@ -670,7 +669,7 @@
             const transferableBitmaps = Object.values(imgBitmaps);
             worker.postMessage({ imgBitmaps, params }, transferableBitmaps);
 
-        }, 5); // ディレイを5msに変更
+        }, 5); 
     };
 
     worker.onmessage = (e) => {
@@ -700,12 +699,10 @@
 
     clearButton.addEventListener('click', resetElements);
 
-    // --- イベントリスナー設定 ---
     for (const name in elements) {
       const elem = elements[name];
       const dropZone = document.getElementById(elem.drop);
       const fileInput = document.getElementById(elem.input);
-      const thumbImg = document.getElementById(elem.thumb);
       
       dropZone.addEventListener('click', () => fileInput.click());
       dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
@@ -713,7 +710,7 @@
       
       const handleFile = async (file) => {
         if (file && file.type.startsWith('image/')) {
-          showThumbnail(file, dropZone, thumbImg);
+          showThumbnail(file, dropZone, document.getElementById(elem.thumb));
           imgData[name] = await loadImage(file);
           scheduleMerge();
         }
@@ -735,7 +732,6 @@
     [options.toggleText, options.textColor].forEach(id => document.getElementById(id).addEventListener('input', scheduleMerge));
     Object.values(sliders).forEach(s => document.getElementById(s.id).addEventListener('input', scheduleMerge));
     
-    // 個別テキスト関連
     const individualTextToggle1 = document.getElementById(individualTextControls.toggle);
     const individualTextDiv1 = document.querySelector('.individual-text-controls');
     const individualTextToggle2 = document.getElementById(individualTextControls.toggle2);
@@ -755,29 +751,31 @@
         document.getElementById(targetId).addEventListener('input', scheduleMerge);
     });
 
+    // ★★★ BUG FIX: 不安定なDOM操作を、安全な要素の移動に修正 ★★★
     const adjustMobileLayout = () => {
       if (isMobile) {
         const qrSection = document.getElementById('qr-section');
-        const qrInputGroups = qrSection.querySelectorAll('.qr-input-group');
-        const containers = qrSection.querySelectorAll('.qr-group');
-        
-        // 元のグループをクリア
-        containers.forEach(c => c.innerHTML = '');
+        const leftTop = document.querySelector('.qr-input-group[data-id="leftTop"]');
+        const rightTop = document.querySelector('.qr-input-group[data-id="rightTop"]');
+        const leftQR = document.querySelector('.qr-input-group[data-id="leftQR"]');
+        const rightQR = document.querySelector('.qr-input-group[data-id="rightQR"]');
 
-        // 新しいグループを作成し、要素を再配置
-        const newGroup1 = document.createElement('div');
-        newGroup1.className = 'qr-group';
-        newGroup1.appendChild(qrInputGroups[0]); // leftTop
-        newGroup1.appendChild(qrInputGroups[2]); // leftQR
+        // 元のコンテナを削除
+        qrSection.querySelectorAll('.qr-group').forEach(g => g.remove());
+
+        // 新しいコンテナを作成し、指定の順序で要素を追加
+        const leftGroup = document.createElement('div');
+        leftGroup.className = 'qr-group';
+        leftGroup.appendChild(leftTop);
+        leftGroup.appendChild(leftQR);
         
-        const newGroup2 = document.createElement('div');
-        newGroup2.className = 'qr-group';
-        newGroup2.appendChild(qrInputGroups[1]); // rightTop
-        newGroup2.appendChild(qrInputGroups[3]); // rightQR
-        
-        qrSection.innerHTML = '<h3>QRコード</h3>';
-        qrSection.appendChild(newGroup1);
-        qrSection.appendChild(newGroup2);
+        const rightGroup = document.createElement('div');
+        rightGroup.className = 'qr-group';
+        rightGroup.appendChild(rightTop);
+        rightGroup.appendChild(rightQR);
+
+        qrSection.appendChild(leftGroup);
+        qrSection.appendChild(rightGroup);
       }
     };
     
