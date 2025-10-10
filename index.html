@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>固定ルート画像合成v3.2 (Worker対応)-PCのみパラメータ調整済み</title>
+  <title>固定ルート画像合成v3.2 (Worker対応)-pcパラメータ調整済み</title>
   <style>
     :root {
       --color-bg: #263238;
@@ -505,9 +505,9 @@
         indTextSize2: 80, indTextX2: 0, indTextY2: 0
     };
     const mobileParams = {
-        bulkTextSize: 50, leftOffset: -20, rightOffset: 20, topVertical: 0, bottomVertical: 250, qrSize: 18,
-        indTextSize1: 60, indTextX1: -100, indTextY1: 0,
-        indTextSize2: 60, indTextX2: 100, indTextY2: 0
+        bulkTextSize: 80, leftOffset: 230, rightOffset: 0, topVertical: 20, bottomVertical: 350, qrSize: 15,
+        indTextSize1: 80, indTextX1: 0, indTextY1: 0,
+        indTextSize2: 80, indTextX2: 0, indTextY2: 0
     };
     const isMobile = window.matchMedia('(max-width: 767px)').matches;
     const activeParams = isMobile ? mobileParams : desktopParams;
